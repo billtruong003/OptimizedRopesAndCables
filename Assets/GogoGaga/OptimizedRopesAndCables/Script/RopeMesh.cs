@@ -11,6 +11,10 @@ namespace GogoGaga.OptimizedRopesAndCables
     {
         [Range(3, 25)] public int OverallDivision = 6;
         [Range(0.01f, 10)] public float ropeWidth = 0.3f;
+        [Tooltip("Use rope height for flattening the rope")]
+        public bool useHeight = false;
+
+        [Range(0.01f, 10)] public float ropeHeight = 0.3f;
         [Range(3, 20)] public int radialDivision = 8;
         [Tooltip("For now only base color is applied")]
         public Material material;
@@ -23,7 +27,7 @@ namespace GogoGaga.OptimizedRopesAndCables
         private Mesh ropeMesh;
         private bool isStartOrEndPointMissing;
 
-        // Use fields to store lists
+        // Sử dụng các trường để lưu trữ danh sách
         private List<Vector3> vertices = new List<Vector3>();
         private List<int> triangles = new List<int>();
         private List<Vector2> uvs = new List<Vector2>();
@@ -33,16 +37,16 @@ namespace GogoGaga.OptimizedRopesAndCables
             InitializeComponents();
             if (rope.IsPrefab)
                 return;
-            
+
             SubscribeToRopeEvents();
             if (meshRenderer && material)
             {
                 meshRenderer.material = material;
             }
-            // We are using delay call to generate mesh to avoid errors in the editor
-            #if UNITY_EDITOR
+            // Chúng ta sử dụng delay call để tạo mesh tránh lỗi trong editor
+#if UNITY_EDITOR
             EditorApplication.delayCall += DelayedGenerateMesh;
-            #endif
+#endif
         }
 
         private void Awake()
@@ -55,9 +59,9 @@ namespace GogoGaga.OptimizedRopesAndCables
         {
             if (!Application.isPlaying)
             {
-                #if UNITY_EDITOR
+#if UNITY_EDITOR
                 EditorApplication.delayCall += DelayedGenerateMesh;
-                #endif
+#endif
             }
             SubscribeToRopeEvents();
         }
@@ -65,9 +69,9 @@ namespace GogoGaga.OptimizedRopesAndCables
         private void OnDisable()
         {
             UnsubscribeFromRopeEvents();
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             EditorApplication.delayCall -= DelayedGenerateMesh;
-            #endif
+#endif
         }
 
         private void InitializeComponents()
@@ -84,13 +88,13 @@ namespace GogoGaga.OptimizedRopesAndCables
 
         private void CheckEndPoints()
         {
-            // Check if start and end points are assigned
+            // Kiểm tra xem các điểm bắt đầu và kết thúc có được gán hay không
             if (gameObject.scene.rootCount == 0)
             {
                 isStartOrEndPointMissing = false;
                 return;
             }
-            
+
             if (rope.StartPoint == null || rope.EndPoint == null)
             {
                 isStartOrEndPointMissing = true;
@@ -157,7 +161,8 @@ namespace GogoGaga.OptimizedRopesAndCables
                 for (int j = 0; j <= segmentsPerWire; j++)
                 {
                     float angle = j * Mathf.PI * 2f / segmentsPerWire;
-                    Vector3 offset = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0) * radius;
+                    float height = useHeight ? ropeHeight : radius;
+                    Vector3 offset = new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * height, 0);
                     vertices.Add(transform.InverseTransformPoint(points[i] + rotation * offset));
 
                     float u = (float)j / segmentsPerWire;
@@ -199,7 +204,8 @@ namespace GogoGaga.OptimizedRopesAndCables
             for (int j = 0; j <= segmentsPerWire; j++)
             {
                 float angle = j * Mathf.PI * 2f / segmentsPerWire;
-                Vector3 offset = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0) * radius;
+                float height = useHeight ? ropeHeight : radius;
+                Vector3 offset = new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * height, 0);
                 vertices.Add(transform.InverseTransformPoint(points[0] + startRotation * offset));
 
                 if (j < segmentsPerWire)
@@ -220,7 +226,8 @@ namespace GogoGaga.OptimizedRopesAndCables
             for (int j = 0; j <= segmentsPerWire; j++)
             {
                 float angle = j * Mathf.PI * 2f / segmentsPerWire;
-                Vector3 offset = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0) * radius;
+                float height = useHeight ? ropeHeight : radius;
+                Vector3 offset = new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * height, 0);
                 vertices.Add(transform.InverseTransformPoint(points[points.Length - 1] + endRotation * offset));
 
                 if (j < segmentsPerWire)
@@ -238,6 +245,7 @@ namespace GogoGaga.OptimizedRopesAndCables
             ropeMesh.uv = uvs.ToArray();
             ropeMesh.RecalculateNormals();
         }
+
 
         void GenerateMesh()
         {
@@ -285,9 +293,9 @@ namespace GogoGaga.OptimizedRopesAndCables
         private void OnDestroy()
         {
             UnsubscribeFromRopeEvents();
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             EditorApplication.delayCall -= DelayedGenerateMesh;
-            #endif
+#endif
 
             if (meshRenderer != null)
                 Destroy(meshRenderer);
